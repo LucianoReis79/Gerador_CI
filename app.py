@@ -107,3 +107,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    # Rodapé com créditos
+st.sidebar.markdown("---")
+st.sidebar.caption("⭐ Desenvolvido por Luciano Reis- 2026")
