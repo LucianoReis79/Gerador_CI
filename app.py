@@ -37,7 +37,7 @@ def main():
     
     # 1. Interface de Seleção [6, 7]
     tipo_doc = st.selectbox("Selecione o Tipo de Documento:", ["Documento Tipo 1", "Documento Tipo 2"])
-    modelo_path = "modelo1.docx" if tipo_doc == "Documento Tipo 1" else "modelo2.docx"
+    modelo_path = "saque_rp.docx" if tipo_doc == "Documento Tipo 1" else "dispensa.docx"
     campos_necessarios = CAMPOS_TIPO_1 if tipo_doc == "Documento Tipo 1" else CAMPOS_TIPO_2
 
     # 2. Área de Texto para Dados [8]
