@@ -35,7 +35,7 @@ def main():
     
     # 2. Seleção de Tipo (Radial) [1]
     tipo_doc = st.radio(
-        "Escolha o tipo de documento que deseja gerar:",
+        " Escolha o tipo de documento que deseja gerar:",
         ["Saque RP", "Dispensa"],
         horizontal=True
     )
@@ -109,5 +109,21 @@ if __name__ == "__main__":
     main()
     
     # Rodapé com créditos
+    
+    
+    
 st.sidebar.markdown("---")
+instrucoes_html = """
+<div style="background-color: #D1E8FF; padding: 15px; border-radius: 5px; border-left: 8px solid #003366; color: #000; margin-bottom: 20px;">
+    <h3 style="margin-top: 0; font-size: 18px;"> Instruções de Uso</h3>
+    <ul style="font-size: 13px; line-height: 1.5; padding-left: 20px;">
+        <li><b>Navegação:</b> Escolha o tipo de documento no seletor.</li>
+        <li><b>Copiar Dados:</b> No Excel, selecione as linhas com o <b>cabeçalho</b> e use Ctrl+C.</li>
+        <li><b>Processamento:</b> Cole os dados e clique em <b> Processar Dados</b>.</li>
+        <li><b>Geração:</b> Clique em <b>  Gerar Documentos</b>.</li>
+        <li><b>Download:</b> Clique em <b>  Baixar Documentos (.ZIP)</b>.</li>
+    </ul>
+    </div>
+"""
+st.sidebar.markdown(instrucoes_html, unsafe_allow_html=True)
 st.sidebar.caption("⭐ Desenvolvido por Luciano Reis- 2026")
