@@ -5,10 +5,10 @@ import zipfile
 import io
 import os
 
-# 1. Configuração da Página [1]
+# 1. Configuração da Página
 st.set_page_config(layout="wide", page_title="Gerador de Documentos CI", page_icon="📄")
 
-# Definição dos campos obrigatórios (extraídos de app_2026.txt) [1, 2]
+# Definição dos campos obrigatórios conforme as fontes
 CAMPOS_SAQUE = [ 
     "Medicamento", "Rp_Ativo", "Curva_ABC", "CMM", "Validade_Ata", "Estoque", 
     "Estoque_Comprometido", "Estoque_Liq", "Cobertura_Estoque_(dias)", 
@@ -31,27 +31,27 @@ def validar_dados(df, obrigatorios):
     return [col for col in obrigatorios if col not in colunas_presentes]
 
 def main():
-    # 2. Instruções na Barra Lateral (Bloco Azul Estilizado) [3]
+    # 2. Instruções na Barra Lateral (Bloco Azul Estilizado)
     instrucoes_html = """
     <div style="background-color: #D1E8FF; padding: 15px; border-radius: 5px; border-left: 8px solid #003366; color: #000; margin-bottom: 20px;">
-        <h3 style="margin-top: 0; font-size: 18px;">📋 Instruções de Uso</h3>
+        <h3 style="margin-top: 0; font-size: 18px;"> Instruções de Uso</h3>
         <ul style="font-size: 13px; line-height: 1.5; padding-left: 20px;">
             <li><b>Navegação:</b> Escolha o tipo de documento no seletor.</li>
             <li><b>Copiar Dados:</b> No Excel, selecione as linhas com o <b>cabeçalho</b> e use Ctrl+C.</li>
-            <li><b>Processamento:</b> Cole os dados e clique em <b>🚀 Processar Dados</b>.</li>
-            <li><b>Geração:</b> Clique em <b>🛠️ Gerar Documentos</b>.</li>
-            <li><b>Download:</b> Clique em <b>📥 Baixar Documentos (.ZIP)</b>.</li>
+            <li><b>Processamento:</b> Cole os dados e clique em <b> Processar Dados</b>.</li>
+            <li><b>Geração:</b> Clique em <b> Gerar Documentos</b>.</li>
+            <li><b>Download:</b> Clique em <b> Baixar Documentos (.ZIP)</b>.</li>
         </ul>
         
     </div>
     """
     st.sidebar.markdown(instrucoes_html, unsafe_allow_html=True)
     st.sidebar.markdown("---")
-    st.sidebar.markdown("<span style='color: black;'>***⭐ Desenvolvido por Luciano Reis, 2026***</span>", unsafe_allow_html=True)
+    st.sidebar.markdown("<span style='color: black;'>***⭐ Desenvolvido por Luciano Reis***</span>", unsafe_allow_html=True)
 
     st.title("📄 Gerador de Documentos da Programação")
 
-    # 3. CSS para fundo azul nos botões de escolha (radio) [4]
+    # 3. Estilo dos botões de escolha
     st.markdown("""
         <style>
         div[data-testid="stRadio"] > div {
@@ -71,35 +71,44 @@ def main():
     modelo_path = "saque_rp.docx" if tipo_doc == "Saque RP" else "dispensa.docx"
     campos_necessarios = CAMPOS_SAQUE if tipo_doc == "Saque RP" else CAMPOS_DISPENSA
 
-    # 4. Entrada de Dados com rótulo em negrito
+    # 4. Entrada de Dados (Ajustada para o motor flexível)
     raw_data = st.text_area("**Cole os dados do Excel aqui (inclua o cabeçalho):**", height=200)
 
-    if st.button("🚀 Processar Dados"):
+    if st.button("1º Passo: Processar Dados"):
         if raw_data.strip():
             try:
-                # Converte TAB em DataFrame e saneia colunas para Jinja2
-                df = pd.read_csv(io.StringIO(raw_data), sep='\t')
+                # Leitura robusta: ignora linhas com erro e usa o motor Python [1]
+                df = pd.read_csv(
+                    io.StringIO(raw_data), 
+                    sep='\t', 
+                    on_bad_lines='skip', 
+                    engine="python"
+                )
+                
+                # Saneia colunas: remove espaços e caracteres especiais para o Jinja2
                 df.columns = [c.strip().replace(' ', '_').replace('$', 'R$') for c in df.columns]
                 
                 faltantes = validar_dados(df, campos_necessarios)
                 if faltantes:
-                    st.error(f"As seguintes colunas estão faltando ou com nome errado: {', '.join(faltantes)}")
+                    st.error(f"Colunas faltando: {', '.join(faltantes)}")
                 else:
-                    st.session_state['df_gerador'] = df [5]
-                    st.success(f"Tabela pronta! {len(df)} registros identificados.")
+                    st.session_state['df_gerador'] = df
+                    st.success(f"Tabela processada: {len(df)} linhas identificadas.")
                     st.dataframe(df, use_container_width=True)
             except Exception as e:
                 st.error(f"Erro ao ler dados: {e}")
+        else:
+            st.warning("Por favor, cole os dados antes de processar.")
 
-    # 5. Geração dos Arquivos Word baseados no campo CI
+    # 5. Geração dos Arquivos
     if 'df_gerador' in st.session_state:
-        if st.button("🛠️ Gerar Documentos Word"):
+        if st.button("2º Passo: Gerar Documentos Word"):
             df = st.session_state['df_gerador']
             zip_buffer = io.BytesIO()
             progresso = st.progress(0)
             
             if not os.path.exists(modelo_path):
-                st.error(f"Erro: O arquivo '{modelo_path}' não foi encontrado.")
+                st.error(f"Modelo '{modelo_path}' não encontrado.")
                 st.stop()
 
             with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
@@ -110,22 +119,22 @@ def main():
                     doc_io = io.BytesIO()
                     doc.save(doc_io)
                     
-                    # Nome do arquivo baseado na coluna CI
+                    # Nome do arquivo baseado no campo CI
                     nome_ci = str(row['CI']).replace("/", "-").replace("\\", "-")
                     zip_file.writestr(f"{nome_ci}.docx", doc_io.getvalue())
                     progresso.progress((idx + 1) / len(df))
             
-            st.session_state['zip_pronto'] = zip_buffer.getvalue() [6]
-            st.success("Sucesso! Documentos gerados no pacote ZIP.")
+            st.session_state['zip_pronto'] = zip_buffer.getvalue()
+            st.success("Documentos gerados com sucesso!")
 
-    # 6. Botão de Download [7]
+    # 6. Download
     if 'zip_pronto' in st.session_state:
         st.download_button(
-            label="📥 Baixar Documentos (.ZIP)",
+            label="3º Passo: Baixar Documentos (.ZIP)",
             data=st.session_state['zip_pronto'],
             file_name=f"documentos_{tipo_doc.lower().replace(' ', '_')}.zip",
             mime="application/zip"
         )
 
 if __name__ == "__main__":
-    main() # [3]
+    main()
