@@ -47,7 +47,7 @@ def main():
     """
     st.sidebar.markdown(instrucoes_html, unsafe_allow_html=True)
     st.sidebar.markdown("---")
-    st.sidebar.caption("⭐ Desenvolvido por Luciano Reis")
+    st.sidebar.markdown("<span style='color: black;'>***⭐ Desenvolvido por Luciano Reis, 2026***</span>", unsafe_allow_html=True)
 
     st.title("📄 Gerador de Documentos da Programação")
 
