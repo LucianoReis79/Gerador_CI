@@ -5,105 +5,103 @@ import zipfile
 import io
 import os
 
-# Configuração da página profissional [1, 4]
-st.set_page_config(layout="wide", page_title="Gerador de Documentos", page_icon="📄")
+# 1. Configuração da Página
+st.set_page_config(layout="wide", page_title="Gerador de Documentos CI", page_icon="📄")
 
-# Estilos de campos obrigatórios [Turnos anteriores]
-CAMPOS_TIPO_1 = [
-    "Medicamento", "Rp Ativo", "Curva ABC", "CMM", "Validade Ata", "Estoque", 
-    "Estoque Comprometido", "Estoque Liq", "Cobertura Estoque (dias)", 
-    "Cobertura Prevista", "Nº Meses", "FATOR_EMB", "Pendencias de Entrega", 
-    "Outras aquisições em andamento", "Pedido mensal", "CI", "Data", 
-    "Previsão de ativação da ata", "Valor pedido R$", "Tipo de demanda", "Programa"
+# Definição dos campos obrigatórios (com underscores para compatibilidade Jinja2)
+CAMPOS_SAQUE = [
+    "Medicamento", "Rp_Ativo", "Curva_ABC", "CMM", "Validade_Ata", "Estoque", 
+    "Estoque_Comprometido", "Estoque_Liq", "Cobertura_Estoque_(dias)", 
+    "Cobertura_Prevista", "Nº_Meses", "FATOR_EMB", "Pendencias_de_Entrega", 
+    "Outras_aquisicoes_em_andamento", "Pedido_mensal", "CI", "Data", 
+    "Previsao_de_ativacao_da_ata", "Valor_pedido", "Tipo_de_demanda", "Programa"
 ]
 
-CAMPOS_TIPO_2 = [
-    "Medicamento", "Rp ativo", "Curva ABC", "CMM", "Validade Ata", "Estoque", 
-    "Estoque Comprometido", "Estoque Liq", "Cobertura Estoque (dias)", 
-    "Cobertura Prevista", "Nº Meses", "FATOR_EMB", "Pendencias de Entrega", 
-    "Outras aquisições em andamento", "Pedido mensal", "CI", "Data", 
-    "Previsão de ativação da ata", "Valor do pedido", "Tipo", "Programa", 
-    "Texto ajustado", "Texto ajustado 2"
+CAMPOS_DISPENSA = [
+    "Medicamento", "Rp_ativo", "Curva_ABC", "CMM", "Validade_Ata", "Estoque", 
+    "Estoque_Comprometido", "Estoque_Liq", "Cobertura_Estoque_(dias)", 
+    "Cobertura_Prevista", "Nº_Meses", "FATOR_EMB", "Pendencias_de_Entrega", 
+    "Outras_aquisicoes_em_andamento", "Pedido_mensal", "CI", "Data", 
+    "Previsao_de_ativacao_da_ata", "Valor_do_pedido", "Tipo_de_demanda", "Programa", 
+    "Texto_ajustado", "Texto_ajustado_2"
 ]
 
 def validar_dados(df, obrigatorios):
-    """Verifica se todas as colunas necessárias existem [1, 5]"""
     colunas_presentes = set(df.columns)
-    faltantes = [col for col in obrigatorios if col not in colunas_presentes]
-    return faltantes
+    return [col for col in obrigatorios if col not in colunas_presentes]
 
 def main():
-    st.title("📄 Gerador de Documentos de Programação de Medicamentos")
+    st.title("📄 Gerador de Documentos da Programação")
     
-    # 1. Interface de Seleção [6, 7]
-    tipo_doc = st.selectbox("Selecione o Tipo de Documento:", ["Documento Tipo 1", "Documento Tipo 2"])
-    modelo_path = "saque_rp.docx" if tipo_doc == "Documento Tipo 1" else "dispensa.docx"
-    campos_necessarios = CAMPOS_TIPO_1 if tipo_doc == "Documento Tipo 1" else CAMPOS_TIPO_2
+    # 2. Seleção de Tipo (Radial) [1]
+    tipo_doc = st.radio(
+        "Escolha o tipo de documento que deseja gerar:",
+        ["Saque RP", "Dispensa"],
+        horizontal=True
+    )
+    
+    modelo_path = "saque_rp.docx" if tipo_doc == "Saque RP" else "dispensa.docx"
+    campos_necessarios = CAMPOS_SAQUE if tipo_doc == "Saque RP" else CAMPOS_DISPENSA
 
-    # 2. Área de Texto para Dados [8]
-    raw_data = st.text_area("Cole os dados copiados do Excel aqui (incluindo cabeçalhos):", height=200)
+    # 3. Entrada de Dados
+    raw_data = st.text_area("Cole os dados do Excel aqui (inclua o cabeçalho):", height=200)
 
-    if st.button("🚀 Processar dados"):
+    if st.button("🚀 Processar Dados"):
         if raw_data.strip():
             try:
-                # Converte texto (TAB do Excel) em DataFrame [2, 9]
+                # Converte TAB em DataFrame
                 df = pd.read_csv(io.StringIO(raw_data), sep='\t')
-                df.columns = df.columns.str.strip() # Limpeza [1]
                 
-                # Validação
+                # Saneamento de colunas: remove espaços e caracteres especiais para o Jinja2
+                df.columns = [c.strip().replace(' ', '_').replace('$', 'R$') for c in df.columns]
+                
                 faltantes = validar_dados(df, campos_necessarios)
                 if faltantes:
-                    st.error(f"Erro: As colunas a seguir não foram encontradas: {', '.join(faltantes)}")
+                    st.error(f"As seguintes colunas estão faltando ou com nome errado: {', '.join(faltantes)}")
                 else:
                     st.session_state['df_gerador'] = df
-                    st.success(f"Tabela processada com {len(df)} linhas!")
+                    st.success(f"Tabela pronta! {len(df)} registros identificados.")
                     st.dataframe(df, use_container_width=True)
             except Exception as e:
-                st.error(f"Erro ao interpretar os dados: {e}")
-        else:
-            st.warning("A área de texto está vazia.")
+                st.error(f"Erro ao ler dados: {e}")
 
-    # 3. Geração de Documentos [10, 11]
+    # 4. Geração dos Arquivos
     if 'df_gerador' in st.session_state:
-        if st.button("🛠️ Gerar documentos"):
+        if st.button("🛠️ Gerar Documentos Word"):
             df = st.session_state['df_gerador']
             zip_buffer = io.BytesIO()
             progresso = st.progress(0)
-            contador = 0
             
-            # Verifica se modelo existe [12]
             if not os.path.exists(modelo_path):
-                st.error(f"Modelo '{modelo_path}' não encontrado na pasta.")
+                st.error(f"Erro: O arquivo '{modelo_path}' não foi encontrado na pasta do projeto.")
                 st.stop()
 
             with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
                 for idx, row in df.iterrows():
-                    # Preenche o Word via DocxTpl
                     doc = DocxTemplate(modelo_path)
+                    # Converte linha para dicionário (chaves serão os nomes das colunas)
                     contexto = row.to_dict()
                     doc.render(contexto)
                     
-                    # Salva no buffer em memória
                     doc_io = io.BytesIO()
                     doc.save(doc_io)
                     
-                    # Nome do arquivo sanitizado
-                    nome_arq = f"doc_{idx+1}_{str(row['Medicamento'])[:20]}.docx".replace("/", "-")
-                    zip_file.writestr(nome_arq, doc_io.getvalue())
+                    # Nome do arquivo baseado no campo CI (limpando caracteres proibidos)
+                    nome_ci = str(row['CI']).replace("/", "-").replace("\\", "-")
+                    nome_arq = f"{nome_ci}.docx"
                     
-                    # Atualiza progresso [13]
-                    contador += 1
-                    progresso.progress(contador / len(df))
+                    zip_file.writestr(nome_arq, doc_io.getvalue())
+                    progresso.progress((idx + 1) / len(df))
             
             st.session_state['zip_pronto'] = zip_buffer.getvalue()
-            st.success(f"Concluído! {contador} documentos gerados.")
+            st.success(f"Sucesso! {len(df)} documentos gerados no pacote.")
 
-    # 4. Download [14]
+    # 5. Download do ZIP
     if 'zip_pronto' in st.session_state:
         st.download_button(
-            label="📥 Baixar documentos.zip",
+            label="📥 Baixar Documentos (.ZIP)",
             data=st.session_state['zip_pronto'],
-            file_name="documentos.zip",
+            file_name=f"documentos_{tipo_doc.lower().replace(' ', '_')}.zip",
             mime="application/zip"
         )
 
